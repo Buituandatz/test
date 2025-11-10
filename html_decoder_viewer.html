@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTML Decoder & Viewer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+            max-width: 800px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 2em;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 0.95em;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 150px;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            resize: vertical;
+            transition: border-color 0.3s;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .info-box {
+            background: #f8f9ff;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: #555;
+        }
+
+        .url-output {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 10px;
+            word-break: break-all;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .viewer-frame {
+            width: 100%;
+            min-height: 400px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .error {
+            background: #fee;
+            border-left: 4px solid #f44;
+            color: #c33;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 10px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 HTML Decoder & Viewer</h1>
+        <p class="subtitle">Giải mã và hiển thị HTML được mã hóa Base64</p>
+
+        <div class="info-box">
+            <strong>Cách sử dụng:</strong><br>
+            1. Nhập HTML đã mã hóa Base64 vào ô bên dưới<br>
+            2. Nhấn "Hiển thị HTML" để xem kết quả<br>
+            3. Hoặc nhấn "Tạo URL" để tạo link chia sẻ
+        </div>
+
+        <div class="input-group">
+            <label for="encodedInput">HTML đã mã hóa (Base64):</label>
+            <textarea id="encodedInput" placeholder="Nhập HTML đã được mã hóa Base64..."></textarea>
+        </div>
+
+        <div class="button-group">
+            <button class="btn-primary" onclick="displayHTML()">🚀 Hiển thị HTML</button>
+            <button class="btn-secondary" onclick="generateURL()">🔗 Tạo URL</button>
+            <button class="btn-secondary" onclick="clearAll()">🗑️ Xóa</button>
+        </div>
+
+        <div id="urlOutput" class="url-output"></div>
+        <div id="error" class="error"></div>
+        <iframe id="viewer" class="viewer-frame"></iframe>
+    </div>
+
+    <script>
+        // Hàm nén dữ liệu bằng pako (gzip)
+        function compressData(str) {
+            // Chuyển string thành Uint8Array
+            const data = new TextEncoder().encode(str);
+            // Nén bằng pako (sẽ load từ CDN)
+            if (typeof pako !== 'undefined') {
+                const compressed = pako.deflate(data, { level: 9 });
+                // Chuyển thành base64
+                return btoa(String.fromCharCode.apply(null, compressed));
+            }
+            return btoa(str); // Fallback nếu pako không load
+        }
+
+        function decompressData(str) {
+            try {
+                if (typeof pako !== 'undefined') {
+                    const compressed = Uint8Array.from(atob(str), c => c.charCodeAt(0));
+                    const decompressed = pako.inflate(compressed);
+                    return new TextDecoder().decode(decompressed);
+                }
+                return atob(str); // Fallback
+            } catch (e) {
+                return atob(str); // Nếu không phải compressed, decode bình thường
+            }
+        }
+
+        // Kiểm tra xem có HTML được truyền qua URL không
+        window.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const encodedHTML = urlParams.get('html');
+            const compressedHTML = urlParams.get('c'); // compressed version
+            
+            if (compressedHTML) {
+                const decoded = decompressData(compressedHTML);
+                document.getElementById('encodedInput').value = compressedHTML;
+                document.getElementById('viewer').srcdoc = decoded;
+                document.getElementById('viewer').style.display = 'block';
+            } else if (encodedHTML) {
+                document.getElementById('encodedInput').value = encodedHTML;
+                displayHTML();
+            }
+        });
+
+        function displayHTML() {
+            const encoded = document.getElementById('encodedInput').value.trim();
+            const viewer = document.getElementById('viewer');
+            const error = document.getElementById('error');
+            
+            error.style.display = 'none';
+            
+            if (!encoded) {
+                showError('Vui lòng nhập HTML đã mã hóa!');
+                return;
+            }
+            
+            try {
+                const decoded = atob(encoded);
+                viewer.srcdoc = decoded;
+                viewer.style.display = 'block';
+            } catch (e) {
+                showError('Lỗi giải mã! Vui lòng kiểm tra lại mã Base64.');
+                viewer.style.display = 'none';
+            }
+        }
+
+        function generateURL() {
+            const encoded = document.getElementById('encodedInput').value.trim();
+            const urlOutput = document.getElementById('urlOutput');
+            const error = document.getElementById('error');
+            
+            error.style.display = 'none';
+            
+            if (!encoded) {
+                showError('Vui lòng nhập HTML đã mã hóa!');
+                return;
+            }
+            
+            const baseURL = window.location.origin + window.location.pathname;
+            const fullURL = `${baseURL}?html=${encodeURIComponent(encoded)}`;
+            
+            urlOutput.textContent = fullURL;
+            urlOutput.style.display = 'block';
+            
+            // Copy to clipboard
+            navigator.clipboard.writeText(fullURL).then(() => {
+                const originalText = urlOutput.textContent;
+                urlOutput.textContent = '✓ URL đã được sao chép vào clipboard!';
+                setTimeout(() => {
+                    urlOutput.textContent = originalText;
+                }, 2000);
+            });
+        }
+
+        function clearAll() {
+            document.getElementById('encodedInput').value = '';
+            document.getElementById('viewer').style.display = 'none';
+            document.getElementById('urlOutput').style.display = 'none';
+            document.getElementById('error').style.display = 'none';
+        }
+
+        function showError(message) {
+            const error = document.getElementById('error');
+            error.textContent = message;
+            error.style.display = 'block';
+        }
+
+        // Demo: Tạo HTML mẫu đã mã hóa
+        console.log('Demo: Để tạo HTML mã hóa, dùng lệnh sau trong console:');
+        console.log('btoa("<h1>Hello World</h1>")');
+    </script>
+</body>
+</html>
