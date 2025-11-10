@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telegram HTML Preview</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 100%;
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: #666;
+        }
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="loading" class="loading">
+            <p>Đang tải website...</p>
+        </div>
+        <div id="error" class="error" style="display: none;"></div>
+        <div id="content"></div>
+    </div>
+
+    <script>
+        // Khởi tạo Telegram Web App
+        const tg = window.Telegram.WebApp;
+        tg.expand(); // Mở rộng full height
+        tg.ready();
+
+        // Lấy HTML content từ URL parameters
+        function getHtmlFromUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const encodedHtml = urlParams.get('html');
+            
+            if (!encodedHtml) {
+                showError('Không tìm thấy HTML content');
+                return null;
+            }
+            
+            try {
+                // Decode base64
+                const html = atob(encodedHtml);
+                return html;
+            } catch (error) {
+                showError('Lỗi khi decode HTML: ' + error.message);
+                return null;
+            }
+        }
+
+        function showError(message) {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('error').style.display = 'block';
+            document.getElementById('error').textContent = message;
+        }
+
+        function renderHtml(htmlContent) {
+            document.getElementById('loading').style.display = 'none';
+            
+            // Tạo iframe để render HTML an toàn
+            const iframe = document.createElement('iframe');
+            iframe.srcdoc = htmlContent;
+            iframe.style.width = '100%';
+            iframe.style.height = '500px';
+            iframe.style.border = 'none';
+            iframe.style.borderRadius = '8px';
+            
+            document.getElementById('content').appendChild(iframe);
+        }
+
+        // Khởi chạy khi page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const htmlContent = getHtmlFromUrl();
+            if (htmlContent) {
+                renderHtml(htmlContent);
+            }
+        });
+    </script>
+</body>
+</html>
